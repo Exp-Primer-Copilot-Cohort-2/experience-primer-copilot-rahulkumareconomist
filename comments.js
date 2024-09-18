@@ -1,74 +1,68 @@
-```
-// create web server
-```
-var express = require('express');
-var app = express();
-var bodyParser = require('body-parser');
-var mongoose = require('mongoose');
-var Comment = require('./comment');
+// Create web server
 
-// connect to database
-mongoose.connect('mongodb://localhost/comments');
+const express = require('express');
+const app = express();
 
-// configure app to use bodyParser()
-// this will let us get the data from a POST
-app.use(bodyParser.urlencoded({ extended: true }));
-app.use(bodyParser.json());
+// Middleware
+app.use(express.json());
 
-var port = process.env.PORT || 8080; // set our port
+// Data
+const comments = [
+    { id: 1, comment: 'Hello World' },
+    { id: 2, comment: 'Nice to meet you' }
+]
 
-// ROUTES FOR OUR API
-// =============================================================================
-var router = express.Router(); // get an instance of the express Router
-
-// middleware to use for all requests
-router.use(function(req, res, next) {
-    // do logging
-    console.log('Something is happening.');
-    next(); // make sure we go to the next routes and don't stop here
+// Routes
+app.get('/comments', (req, res) => {
+    res.send(comments);
 });
 
-// test route to make sure everything is working (accessed at GET http://localhost:8080/api)
-router.get('/', function(req, res) {
-    res.json({ message: 'hooray! welcome to our api!' });   
+app.get('/comments/:id', (req, res) => {
+    const comment = comments.find(c => c.id === parseInt(req.params.id));
+    if (!comment) res.status(404).send('The comment with the given ID was not found');
+    res.send(comment);
 });
 
-// on routes that end in /comments
-// ----------------------------------------------------
-router.route('/comments')
+app.post('/comments', (req, res) => {
+    const comment = {
+        id: comments.length + 1,
+        comment: req.body.comment
+    };
+    comments.push(comment);
+    res.send(comment);
+});
 
-    // create a comment (accessed at POST http://localhost:8080/api/comments)
-    .post(function(req, res) {
+app.put('/comments/:id', (req, res) => {
+    const comment = comments.find(c => c.id === parseInt(req.params.id));
+    if (!comment) res.status(404).send('The comment with the given ID was not found');
 
-        var comment = new Comment();      // create a new instance of the Comment model
-        comment.name = req.body.name;  // set the comments name (comes from the request)
-        comment.comment = req.body.comment;  // set the comments comment (comes from the request)
+    comment.comment = req.body.comment;
+    res.send(comment);
+});
 
-        // save the comment and check for errors
-        comment.save(function(err) {
-            if (err)
-                res.send(err);
+app.delete('/comments/:id', (req, res) => {
+    const comment = comments.find(c => c.id === parseInt(req.params.id));
+    if (!comment) res.status(404).send('The comment with the given ID was not found');
 
-            res.json({ message: 'Comment created!' });
-        });
+    const index = comments.indexOf(comment);
+    comments.splice(index, 1);
 
-    })
+    res.send(comment);
+});
 
-    // get all the comments (accessed at GET http://localhost:8080/api/comments)
-    .get(function(req, res) {
-        Comment.find(function(err, comments) {
-            if (err)
-                res.send(err);
+// Start server
+const port = process.env.PORT || 3000;
+app.listen(port, () => console.log(`Listening on port ${port}...`));
 
-            res.json(comments);
-        });
-    });
+// Run server
+// node comments.js
+// Open browser and type http://localhost:3000/comments
 
-// on routes that end in /comments/:comment_id
-// ----------------------------------------------------
-router.route('/comments/:comment_id')
-
-    // get the comment with that id (accessed at GET http://localhost:8080/api/comments/:comment_id)
-    .get(function(req, res) {
-        Comment.findById(req.params.comment_id, function(err, comment) {
-            if (err)
+// Test API using Postman
+// GET http://localhost:3000/comments
+// POST http://localhost:3000/comments
+// PUT http://localhost:3000/comments/1
+// DELETE http://localhost:3000/comments/1
+// GET http://localhost:3000/comments/1
+// GET http://localhost:3000/comments/2
+// GET http://localhost:3000/comments
